@@ -1,42 +1,33 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow
- */
-
 import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, View, Form, TextInput, Button} from 'react-native';
+import {StyleSheet, Text, View, TextInput, Button} from 'react-native';
 
-const instructions = Platform.select({
-  ios: 'Press Cmd+R to reload,\n' + 'Cmd+D or shake for dev menu',
-  android:
-    'Double tap R on your keyboard to reload,\n' +
-    'Shake or press menu button for dev menu',
-});
+// const ws = new WebSocket('ws://192.168.0.30:3000/test1');
 
-const ws = new WebSocket('ws://apipaper.herokuapp.com/echo');
-
-type Props = {};
 export default class App extends Component<Props> {
 
   constructor(props) {
     super(props);
     this.state = { 
       messageS: '',
-      messageR: ''
+      messageR: '',
+      nameConnection: '',
+      ws: '',
     };
   }
-  componentWillMount() {
-   ws.onmessage = (e) => {
-     this.setState({
-       messageR: e.data
-     })
+
+  connectWS = () => {
+    const ws = new WebSocket(`ws://192.168.43.110:3000/${this.state.nameConnection}`)
+    // const ws = new WebSocket(`ws://apipaper.herokuapp.com/${this.state.nameConnection}`)
+    this.setState({ ws })
+    ws.onmessage = (e) => {
+      this.setState({
+        messageR: e.data
+      })
     }
 
-     ws.onopen = () => {
-      ws.send(this.state.messageS)
+    ws.onopen = () => {
+      this.state.messageS !== '' &&
+        ws.send(JSON.stringify({name: this.state.nameConnection, message: this.state.messageS}))
     }
 
     ws.onerror = (e) => {
@@ -48,30 +39,48 @@ export default class App extends Component<Props> {
       console.log(e.code, e.reason)
     }
   }
-
-  handleChanheMessage = (e) => {
-    this.setState({
-      message: e.target.value
-    })
+  
+  
+  componentWillUnmount() {
+    const { ws } = this.state
+    ws.onclose()
   }
-  // componentWillUnmount() {
-  //   ws.onclose()
-  // }
   
   render() {
+    const { ws } = this.state
     return (
       <View style={styles.container}>
-        <Text style={styles.welcome}>ingrese mensaje!</Text>
+      { ws === '' ?
+      (
+        <View>
+      <Text style={styles.welcome}>ingrese Nombre!</Text>
           <TextInput
             style={{height: 40, width: 150, borderColor: 'gray', borderWidth: 1}}
-            onChangeText={(messageS) => this.setState({messageS})}
+            onChangeText={nameConnection => this.setState({nameConnection})}
+            value={this.state.nameConnection}
+          />
+          <Button
+            onPress={this.connectWS}
+            title="Connect WS"
+            color="#841584"
+          />
+          </View>
+      ) : (
+        <View>
+        <Text style={styles.welcome}>ingrese mensaje!</Text>
+          <TextInput
+            style={{height: 40, width: 250, borderColor: 'gray', borderWidth: 1}}
+            onChangeText={messageS => this.setState({messageS})}
             value={this.state.messageS}
           />
           <Button
             onPress={ws.onopen}
             title="Send Message"
             color="#841584"
-          />
+          /> 
+          </View>
+          )
+      }
         <Text style={styles.welcome}>{this.state.messageR}</Text>
       </View>
     );
